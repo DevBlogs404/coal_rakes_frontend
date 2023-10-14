@@ -1,10 +1,9 @@
 "use client";
 import { useState, createContext, useEffect } from "react";
 import axios from "axios";
-import { getCookie } from "cookies-next";
 
 interface IUser {
-  id: string;
+  id: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -13,14 +12,19 @@ interface IUser {
 }
 
 interface State {
-  token: string | null;
+  data?: IUser | null;
+  loading: boolean;
+  error: string | null;
 }
 
-// interface AuthState extends State {
-//   setAuthState: React.Dispatch<React.SetStateAction<State>>;
-// }
-export const AuthenticationContext = createContext<State>({
-  token: null,
+interface AuthState extends State {
+  setAuthState: React.Dispatch<React.SetStateAction<State>>;
+}
+export const AuthenticationContext = createContext<AuthState>({
+  data: null,
+  loading: false,
+  error: null,
+  setAuthState: () => {},
 });
 
 export default function AuthContext({
@@ -29,34 +33,41 @@ export default function AuthContext({
   children: React.ReactNode;
 }) {
   const [authState, setAuthState] = useState<State>({
-    token: null,
+    data: null,
+    loading: false,
+    error: null,
   });
 
-  const token = localStorage.getItem("token");
-
-  if (token) {
+  const fetchUser = async () => {
     setAuthState({
-      token: token,
+      data: null,
+      loading: true,
+      error: null,
     });
-  } else {
-    setAuthState({
-      token: null,
-    });
-  }
+    try {
+      let response = await axios.get("http://localhost:6969/api/v1/auth/user", {
+        withCredentials: true,
+      });
+      setAuthState({
+        data: response.data,
+        loading: false,
+        error: null,
+      });
+    } catch (error: any) {
+      setAuthState({
+        data: null,
+        loading: false,
+        error: error,
+      });
+    }
+  };
 
-  // const fetchUser = async () => {
-  //   const response = await axios.post("http://localhost:6969/api/v1/auth/me", {
-  //     headers: {
-  //       autherization: `Bearer ${token}`,
-  //     },
-  //     cookies:{
-
-  //     }
-  //   });
-  // };
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
   return (
-    <AuthenticationContext.Provider value={{ ...authState }}>
+    <AuthenticationContext.Provider value={{ ...authState, setAuthState }}>
       {children}
     </AuthenticationContext.Provider>
   );

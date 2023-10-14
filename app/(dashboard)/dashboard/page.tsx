@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useTransition, useContext } from "react";
-import { getCookie, getCookies } from "cookies-next";
+import { getCookie } from "cookies-next";
 
 import SidingManagement from "../slideManagement/page";
 import RakeManagement from "../rakeManagement/page";
@@ -14,6 +14,11 @@ export default function DashboardPage() {
   const router = useRouter();
   const [tab, setTab] = useState("siding");
   const [isPending, startTransition] = useTransition();
+  const { setAuthState, data, loading, error } = useContext(
+    AuthenticationContext
+  );
+
+  const token = getCookie("auth_cookie");
 
   function setNextTab(nextTab: string) {
     startTransition(() => {
@@ -26,20 +31,38 @@ export default function DashboardPage() {
       let response = await axios.get("http://localhost:6969/api/v1/auth/user", {
         withCredentials: true,
       });
-      console.log(response.data);
-    } catch (error) {
+      setAuthState({
+        data: response.data.user,
+        loading: false,
+        error: null,
+      });
+    } catch (error: any) {
+      setAuthState({
+        data: null,
+        loading: false,
+        error: error,
+      });
       console.log(error);
     }
   };
 
   useEffect(() => {
+    if (!token) {
+      router.replace("/");
+    }
     getUser();
-  }, []);
+  }, [token]);
+
+  if (loading) {
+    return <div>loading..</div>;
+  }
+  if (error) {
+    return <div>Something went wrong!!..</div>;
+  }
 
   return (
     <div>
       <h1 className="text-3xl font-semibold">Siding Admin Dashboard</h1>
-
       {/* Navigation Tabs */}
       <div className="mt-4">
         <div
